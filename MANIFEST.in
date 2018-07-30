@@ -1,0 +1,10 @@
+include README.rst
+include AUTHORS
+include INSTALL
+include LICENSE
+include MANIFEST.in
+include scrapy_httpproxy/VERSION
+recursive-include docs *
+prune docs/build
+recursive-include tests *
+global-exclude __pycache__ *.py[cod]
