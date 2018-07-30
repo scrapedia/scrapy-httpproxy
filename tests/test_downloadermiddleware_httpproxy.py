@@ -1,14 +1,15 @@
 import os
-import sys
 from functools import partial
-from twisted.trial.unittest import TestCase, SkipTest
 
-from scrapy.downloadermiddlewares.httpproxy import HttpProxyMiddleware
-from scrapy.exceptions import NotConfigured
-from scrapy.http import Response, Request
-from scrapy.spiders import Spider
 from scrapy.crawler import Crawler
+from scrapy.exceptions import NotConfigured
+from scrapy.http import Request
 from scrapy.settings import Settings
+from scrapy.spiders import Spider
+from twisted.trial.unittest import TestCase
+
+from scrapy_httpproxy.downloadermiddlewares.httpproxy import \
+    HttpProxyMiddleware, cached_proxy_bypass
 
 spider = Spider('foo')
 
@@ -26,13 +27,15 @@ class TestHttpProxyMiddleware(TestCase):
     def test_not_enabled(self):
         settings = Settings({'HTTPPROXY_ENABLED': False})
         crawler = Crawler(spider, settings)
-        self.assertRaises(NotConfigured, partial(HttpProxyMiddleware.from_crawler, crawler))
+        self.assertRaises(NotConfigured,
+                          partial(HttpProxyMiddleware.from_crawler, crawler))
 
     def test_no_environment_proxies(self):
         os.environ = {'dummy_proxy': 'reset_env_and_do_not_raise'}
         mw = HttpProxyMiddleware()
 
         for url in ('http://e.com', 'https://e.com', 'file:///tmp/a'):
+            cached_proxy_bypass.cache_clear()
             req = Request(url)
             assert mw.process_request(req, spider) is None
             self.assertEqual(req.url, url)
@@ -45,7 +48,9 @@ class TestHttpProxyMiddleware(TestCase):
         mw = HttpProxyMiddleware()
 
         for url, proxy in [('http://e.com', http_proxy),
-                ('https://e.com', https_proxy), ('file://tmp/a', None)]:
+                           ('https://e.com', https_proxy),
+                           ('file://tmp/a', None)]:
+            cached_proxy_bypass.cache_clear()
             req = Request(url)
             assert mw.process_request(req, spider) is None
             self.assertEqual(req.url, url)
@@ -54,67 +59,90 @@ class TestHttpProxyMiddleware(TestCase):
     def test_proxy_precedence_meta(self):
         os.environ['http_proxy'] = 'https://proxy.com'
         mw = HttpProxyMiddleware()
-        req = Request('http://scrapytest.org', meta={'proxy': 'https://new.proxy:3128'})
+        cached_proxy_bypass.cache_clear()
+        req = Request('http://scrapytest.org',
+                      meta={'proxy': 'https://new.proxy:3128'})
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://new.proxy:3128'})
 
     def test_proxy_auth(self):
         os.environ['http_proxy'] = 'https://user:pass@proxy:3128'
         mw = HttpProxyMiddleware()
+        cached_proxy_bypass.cache_clear()
         req = Request('http://scrapytest.org')
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic dXNlcjpwYXNz')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic dXNlcjpwYXNz')
         # proxy from request.meta
-        req = Request('http://scrapytest.org', meta={'proxy': 'https://username:password@proxy:3128'})
+        cached_proxy_bypass.cache_clear()
+        req = Request('http://scrapytest.org',
+                      meta={'proxy': 'https://username:password@proxy:3128'})
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic dXNlcm5hbWU6cGFzc3dvcmQ=')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic dXNlcm5hbWU6cGFzc3dvcmQ=')
 
     def test_proxy_auth_empty_passwd(self):
         os.environ['http_proxy'] = 'https://user:@proxy:3128'
         mw = HttpProxyMiddleware()
+        cached_proxy_bypass.cache_clear()
         req = Request('http://scrapytest.org')
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic dXNlcjo=')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic dXNlcjo=')
         # proxy from request.meta
-        req = Request('http://scrapytest.org', meta={'proxy': 'https://username:@proxy:3128'})
+        cached_proxy_bypass.cache_clear()
+        req = Request('http://scrapytest.org',
+                      meta={'proxy': 'https://username:@proxy:3128'})
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic dXNlcm5hbWU6')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic dXNlcm5hbWU6')
 
     def test_proxy_auth_encoding(self):
         # utf-8 encoding
         os.environ['http_proxy'] = u'https://m\u00E1n:pass@proxy:3128'
         mw = HttpProxyMiddleware(auth_encoding='utf-8')
+        cached_proxy_bypass.cache_clear()
         req = Request('http://scrapytest.org')
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic bcOhbjpwYXNz')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic bcOhbjpwYXNz')
 
         # proxy from request.meta
-        req = Request('http://scrapytest.org', meta={'proxy': u'https://\u00FCser:pass@proxy:3128'})
+        cached_proxy_bypass.cache_clear()
+        req = Request('http://scrapytest.org',
+                      meta={'proxy': u'https://\u00FCser:pass@proxy:3128'})
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic w7xzZXI6cGFzcw==')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic w7xzZXI6cGFzcw==')
 
         # default latin-1 encoding
         mw = HttpProxyMiddleware(auth_encoding='latin-1')
+        cached_proxy_bypass.cache_clear()
         req = Request('http://scrapytest.org')
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic beFuOnBhc3M=')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic beFuOnBhc3M=')
 
         # proxy from request.meta, latin-1 encoding
-        req = Request('http://scrapytest.org', meta={'proxy': u'https://\u00FCser:pass@proxy:3128'})
+        cached_proxy_bypass.cache_clear()
+        req = Request('http://scrapytest.org',
+                      meta={'proxy': u'https://\u00FCser:pass@proxy:3128'})
         assert mw.process_request(req, spider) is None
         self.assertEqual(req.meta, {'proxy': 'https://proxy:3128'})
-        self.assertEqual(req.headers.get('Proxy-Authorization'), b'Basic /HNlcjpwYXNz')
+        self.assertEqual(req.headers.get('Proxy-Authorization'),
+                         b'Basic /HNlcjpwYXNz')
 
     def test_proxy_already_seted(self):
         os.environ['http_proxy'] = 'https://proxy.for.http:3128'
         mw = HttpProxyMiddleware()
+        cached_proxy_bypass.cache_clear()
         req = Request('http://noproxy.com', meta={'proxy': None})
         assert mw.process_request(req, spider) is None
         assert 'proxy' in req.meta and req.meta['proxy'] is None
@@ -123,22 +151,26 @@ class TestHttpProxyMiddleware(TestCase):
         os.environ['http_proxy'] = 'https://proxy.for.http:3128'
         mw = HttpProxyMiddleware()
 
+        cached_proxy_bypass.cache_clear()
         os.environ['no_proxy'] = '*'
         req = Request('http://noproxy.com')
         assert mw.process_request(req, spider) is None
         assert 'proxy' not in req.meta
 
+        cached_proxy_bypass.cache_clear()
         os.environ['no_proxy'] = 'other.com'
         req = Request('http://noproxy.com')
         assert mw.process_request(req, spider) is None
         assert 'proxy' in req.meta
 
+        cached_proxy_bypass.cache_clear()
         os.environ['no_proxy'] = 'other.com,noproxy.com'
         req = Request('http://noproxy.com')
         assert mw.process_request(req, spider) is None
         assert 'proxy' not in req.meta
 
         # proxy from meta['proxy'] takes precedence
+        cached_proxy_bypass.cache_clear()
         os.environ['no_proxy'] = '*'
         req = Request('http://noproxy.com', meta={'proxy': 'http://proxy.com'})
         assert mw.process_request(req, spider) is None
