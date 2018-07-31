@@ -56,9 +56,9 @@ deploy:
   distributions: sdist bdist_wheel
   user: grammy.jiang
   password:
-    secure: ZZCaljv2kevryQAPirBO+DcvjPPJZDcq7Cnfr4ncubnQZ3ApFuxO7spLe9PUNDBrIkot8e/CvC4NqVmZvcepHVyqouCOElh3sXERK4RwGywTPHQLvbqUGeic40aOHu0nh/6BGfy6cyubckCbNYN0oTpChAv397HPGfzggCKeUPv2GUVeBUYoCERFntPo6ds7IJszuWABozj1djFNhiAYKdMU9vqpkiXRof7RjuJGEiqHwCgHsp7qUvwSM2A3UgbIMFJ8uGF3YooWz18zUA8y/QJ3X/JNdoTZQJfOhNtIPK+Z5o2LqDpSG6sZdiyONCBK6cCBNWLY9V/cybtkQC6U9LyLRuRhSjYTQuwuxpy7BWp8v0mmFTd/uczPyyWZfz8z3Wg0oX6BpfIx2tjFaR+WBv/Ei7OOVHi1Og2YKbQ/trvOPR77z8cIadOjD1e8VioNGBRfSgQKZMDDr0ErCc3ihDS2Dqe1kPKF5gSgAr9Iq+lOueOjVJjK1iyzkCgP2smq+z2NPFXvshfIp7S2ypKjtpkG6JKxdtaOQ4AcNv21qr2YIHGxylEbyljYNFxGLVApxsK8Yb1YoP3PJntCH53SJOYiCL6A3+jolKw8j99H+xVlqH5wGxi7aR0sM48AnA25DBCKpFo9e4FqxBL7gEu0lumhmbUhHPNH3GM81h63uhI=
+    secure: Gc5YOBeR73owqi7nCic6Z+qrfEmuo4szVJC9N3CtLk6ojy/yyezNsszR0OYNITCuq9dGgg0uK6PFETMnGeoT7VxU8KBNL0GmNny0Ba7yJfh66nk7YFAiA8vFngrdjSiCOQRcfMIvnezT9Wh2BoWxQuyvveWQaLv7/5YkQETSL5HFaJW7oNTioJM8Ll237U+uUYANjiDauMLUGa6/N3BZDMYBlP7FmcKuM4wETL4K6PP31wGozqtIYUa2eBSOUr6jwCnHiNgnOI95Krw0oW0yVPBz2hjzPbE2ZdAjj/JvLV1JGZ4YRrLoPy7CRggbREnIisHc8d+wdyvtGcCtgCELi+njG5VrlOvqbUtJUvtjXIS2htogxYOmdRWVqQWxhhrHqWO7VjXX0Jo8kDwjukTzIZ5iGyzsTwcaZ5cdJ4IE7uEQhI8cehbNisv9kNvgNijH9qheb0YNzD2VEBYHbaQqx4T31KzxK4gGN8h9Gq12TDc9BKovhjLNSBXsC2ng9BHbF+8t+HzCArk02YbACZy/shn4XRIp79Q/BIjYZZkRTLoYh84kSG1xiIOCjlbbpQRlfWhUe+cCwzkkCjc+8gMiXWpfqaxRktVcIlbiOS40NieiHDlQCm0R7sX160G6QzPLYAwvY0n1rmTmvBpJe6CxcvxA6saS5dYe86qHZsa85F8=
   on:
-  #   branch: master
-  #   tags: true
-  #   repo: grammy-jiang/scrapy-httpproxy
-    condition: "$TOXENV == py27"
+    branch: master
+    tags: false
+    repo: grammy-jiang/scrapy-httpproxy
+    condition: "$TOXENV == py27 && $TRAVIS_TAG =~ ^[0-9]+[.][0-9]+[.][0-9]+(rc[0-9]+|[.]dev[0-9]+)?$"
