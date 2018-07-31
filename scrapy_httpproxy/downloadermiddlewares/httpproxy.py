@@ -1,56 +1,50 @@
-import base64
 try:
     from functools import lru_cache
 except ImportError:
     from functools32 import lru_cache
-from six.moves.urllib.parse import urlunparse, unquote
-from six.moves.urllib.request import getproxies, proxy_bypass
 try:
     from urllib2 import _parse_proxy
 except ImportError:
     from urllib.request import _parse_proxy
 
+from scrapy import signals
 from scrapy.exceptions import NotConfigured
+from scrapy.settings import SETTINGS_PRIORITIES
 from scrapy.utils.httpobj import urlparse_cached
-from scrapy.utils.python import to_bytes
+from scrapy.utils.misc import load_object
+from six.moves.urllib.request import proxy_bypass
 
-
-def basic_auth_header(username, password, auth_encoding):
-    user_pass = to_bytes(
-        '%s:%s' % (unquote(username), unquote(password)),
-        encoding=auth_encoding)
-    return b'Basic ' + base64.b64encode(user_pass).strip()
-
-
-def get_proxy(url, orig_type, auth_encoding):
-    proxy_type, user, password, hostport = _parse_proxy(url)
-    proxy_url = urlunparse((proxy_type or orig_type, hostport, '', '', '', ''))
-
-    if user:
-        creds = basic_auth_header(user, password, auth_encoding)
-    else:
-        creds = None
-
-    return creds, proxy_url
-
+from scrapy_httpproxy import get_proxy
+from scrapy_httpproxy.settings import unfreeze_settings, default_settings
 
 cached_proxy_bypass = lru_cache(maxsize=1024)(proxy_bypass)
 
 
 class HttpProxyMiddleware(object):
 
-    def __init__(self, auth_encoding='latin-1'):
-        self.auth_encoding = auth_encoding
-        self.proxies = {}
-        for type_, url in getproxies().items():
-            self.proxies[type_] = get_proxy(url, type_, self.auth_encoding)
+    def __init__(self, settings):
+        self.settings = settings
+        self.auth_encoding = settings.get('HTTPPROXY_AUTH_ENCODING')
+        self.proxies = load_object(settings['HTTPPROXY_STORAGE']).from_middleware(self)
 
     @classmethod
     def from_crawler(cls, crawler):
+        with unfreeze_settings(crawler.settings) as settings:
+            settings.setmodule(
+                module=default_settings, priority=SETTINGS_PRIORITIES['default']
+            )
         if not crawler.settings.getbool('HTTPPROXY_ENABLED'):
             raise NotConfigured
-        auth_encoding = crawler.settings.get('HTTPPROXY_AUTH_ENCODING')
-        return cls(auth_encoding)
+        o = cls(crawler.settings)
+        crawler.signals.connect(o.spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
+        return o
+
+    def spider_opened(self, spider):
+        self.proxies.open_spider(spider)
+
+    def spider_closed(self, spider):
+        self.proxies.close_spider(spider)
 
     def process_request(self, request, spider):
         # ignore if proxy is already set
@@ -58,7 +52,8 @@ class HttpProxyMiddleware(object):
             if request.meta['proxy'] is None:
                 return
             # extract credentials if present
-            creds, proxy_url = get_proxy(request.meta['proxy'], '', self.auth_encoding)
+            creds, proxy_url = get_proxy(request.meta['proxy'], '',
+                                         self.auth_encoding)
             request.meta['proxy'] = proxy_url
             if creds and not request.headers.get('Proxy-Authorization'):
                 request.headers['Proxy-Authorization'] = creds
