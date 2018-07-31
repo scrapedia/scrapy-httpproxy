@@ -2,63 +2,56 @@ language: python
 sudo: false
 branches:
   only:
-    - master
-    - /^\d\.\d+$/
-    - /^\d\.\d+\.\d+(rc\d+|\.dev\d+)?$/
+  - master
+  - "/^\\d\\.\\d+$/"
+  - "/^\\d\\.\\d+\\.\\d+(rc\\d+|\\.dev\\d+)?$/"
 matrix:
   include:
-    - python: 2.7
-      env: TOXENV=py27
-    - python: 2.7
-      env: TOXENV=jessie
-    - python: 2.7
-      env: TOXENV=pypy
-    - python: 2.7
-      env: TOXENV=pypy3
-    - python: 3.4
-      env: TOXENV=py34
-    - python: 3.5
-      env: TOXENV=py35
-    - python: 3.6
-      env: TOXENV=py36
-#    - python: 3.6
-#      env: TOXENV=docs
+  - python: 2.7
+    env: TOXENV=py27
+  - python: 2.7
+    env: TOXENV=jessie
+  - python: 2.7
+    env: TOXENV=pypy
+  - python: 2.7
+    env: TOXENV=pypy3
+  - python: 3.4
+    env: TOXENV=py34
+  - python: 3.5
+    env: TOXENV=py35
+  - python: 3.6
+    env: TOXENV=py36
 install:
-  - |
-      if [ "$TOXENV" = "pypy" ]; then
-        export PYPY_VERSION="pypy-6.0.0-linux_x86_64-portable"
-        wget "https://bitbucket.org/squeaky/portable-pypy/downloads/${PYPY_VERSION}.tar.bz2"
-        tar -jxf ${PYPY_VERSION}.tar.bz2
-        virtualenv --python="$PYPY_VERSION/bin/pypy" "$HOME/virtualenvs/$PYPY_VERSION"
-        source "$HOME/virtualenvs/$PYPY_VERSION/bin/activate"
-      fi
-      if [ "$TOXENV" = "pypy3" ]; then
-        export PYPY_VERSION="pypy3.5-5.9-beta-linux_x86_64-portable"
-        wget "https://bitbucket.org/squeaky/portable-pypy/downloads/${PYPY_VERSION}.tar.bz2"
-        tar -jxf ${PYPY_VERSION}.tar.bz2
-        virtualenv --python="$PYPY_VERSION/bin/pypy3" "$HOME/virtualenvs/$PYPY_VERSION"
-        source "$HOME/virtualenvs/$PYPY_VERSION/bin/activate"
-      fi
-  - pip install -U tox twine wheel codecov
-
+- |
+  if [ "$TOXENV" = "pypy" ]; then
+    export PYPY_VERSION="pypy-6.0.0-linux_x86_64-portable"
+    wget "https://bitbucket.org/squeaky/portable-pypy/downloads/${PYPY_VERSION}.tar.bz2"
+    tar -jxf ${PYPY_VERSION}.tar.bz2
+    virtualenv --python="$PYPY_VERSION/bin/pypy" "$HOME/virtualenvs/$PYPY_VERSION"
+    source "$HOME/virtualenvs/$PYPY_VERSION/bin/activate"
+  fi
+  if [ "$TOXENV" = "pypy3" ]; then
+    export PYPY_VERSION="pypy3.5-5.9-beta-linux_x86_64-portable"
+    wget "https://bitbucket.org/squeaky/portable-pypy/downloads/${PYPY_VERSION}.tar.bz2"
+    tar -jxf ${PYPY_VERSION}.tar.bz2
+    virtualenv --python="$PYPY_VERSION/bin/pypy3" "$HOME/virtualenvs/$PYPY_VERSION"
+    source "$HOME/virtualenvs/$PYPY_VERSION/bin/activate"
+  fi
+- pip install -U tox twine wheel codecov
 script: tox
 after_success:
-  - codecov
-#notifications:
-#  slack:
-#    rooms:
-#      - secure: zsDJgHzhPoAIs8OsOiv5wmNsck++hjZljeYAfKh25UwW8X97Rqvq5r9LMlQzIHf2a638AbsubDNeSbrxxu6cFDeeIFngG1EO5mOSWzKr18LM5pFb0GVlImKzZpKgLqKmaD5ATYXnvUaHjEHgO45TzjIsbwo9P4vRU5C/lGYwfdv/J82hP0OUo02HqWGkwpG0aeuzs1bJZKjS/RdHROt0SQpRfVB8hi4HHrQILgliuVcpvIk46FgRB49VmzpAGuQfJtB06gj8o6tL/1JlXQ9/ElrHwEJyGjiyeP/nP8qit+i9TTlHGT9k0s9oYuXWM8OlgKfKE13Mo8fVRaAhVv9DRcwtNpX5M0RtC5bEjCPQIL14ky4ymeSlGchmy37jTKJCNHm4St4CtodCrF5J77h8Gkjx9tkZOhf4Rd8veMMgv/gj8pyt3asJ8PMDvREjF4n4mRPy5SB53anEhrFXE801KOpqb4Ffsjv2DBJmuAId+OmHLs69jHeiwxkBDaeKDr6rpiiKQaZNbDw5KxjEafEtclVmSdprq57Og2SPaCR1TrUu3SVyUjVoWNj6olKS9ALoiDAVLBprbyBsSS9gYwfTlSBNxCsMApQksjmo0/S6n/FwyCvn4AZZVziLVtVxPBY0sUpRBNySkTTrQzpCiEPNmv7tU8d0ZcVI508/WALzIQ0=
+- codecov
 cache:
   directories:
-    - $HOME/.cache/pip
+  - "$HOME/.cache/pip"
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
   user: grammy.jiang
   password:
-    secure: QQgGyv/0aXJWiXn+0uK/CKahWgFsxbAZp/H9OaJYS2x+fV1m6hpXb5PA28SFo27xmiYtAGTHUkk4MHSKaFDE2gqMJFvkEJaHH0y13VDDhHt0lb9mE8Lx52Zku+vwEZyFHVyUl6fVAkMm00dWofDtTjouzN0GLtNAJW2kNmoWh6z8jQ3nFJH3VmIVM8268YV0rxTBeNQxjuUTSMrMc5oqKNPIt6qyxG3xgTl7Muzz9AKXeeK77vz34sZK3uvwRl12wSunQBGdUqASO3k8Z5XUFmpfg66M1MDRUYGeGnTV8SEu35vBK45RvzQOrPjoZxms1lUM8sZXsH8A1lA7h61lbOCBDTcIpHVdJIHt47E/V2ZVTRJro3RPvTLYh+YrRMg9qyWij8MJvq9x5IPlKCrJrbfjsWsVQn8tbz6M47Z+YAUsQRkfLRhB8IHXTOiiw6DDYPyqvKH1U/86ys8YBL88hSuyvZAtCvDRHW6S9yk6YLq6F/3TmCPIxtQn2bdIwuB3rY5V8vCejPofEZTptikzK9BD5JSHntFiVW/MrykNRkl8z2OLfG3o7wopBH1e/IbUJ7pirC+9J9DcVI7JBTj/bzLyai9VuIGyfADJAOVhCKN8eRPm94XveBndwgWwq8bf6I4hDIsR/eRCvHkUny1ZxpwKuzhIns4/DCSoR3nFO44=
+    secure: QPU3r4DiIR9qol0iDQwmtIo/zsYMukbnGTtBEnX6XE1Kf4L2lfzuNgg4eVxtzB+U9KVio7iWP+RBxZf5u1bVGHllYg+4xmJqe6b34v1g6JhcT4ggL+2QMNEoAnSC2kq5ryenbA3Kv/O54FU8weYCp7qkfGrwDkZpWmX50YiuoV8wLZkOY13QNv/TsbdpMdAMUwSES/4ytkZBF+kmampzIiswNckxpCf78kLYTvt3CtZYKMxPnKa5yLEA9eVWsrJN6ugFgKPWeYKLN3MgzwdizastLSy773VNF5XGgGKR6Wic0D40Ugcik06YCMeZFv8uxxxK6dmGKC9X0k3+3Z2XbQqJ0nwO3QUOAvIV7jjYWaYhYYvgYglGQdUx6SsVUigtEI2Cq2OxwDEKxIy0JKYLEPlaTXxizZE0H9j1jtrx5DykTpKA/SoSkQS0gVP6vGIF3tVLRYWSSAX38aOlnamgeuumkageBJpaaJyZckB/hYqMgWyq/Dk7J/OnWRemu86sP6YUHDUzTlliLSFJhn031461Wr4p3ajdNgulNYDq78j6UBYTezqroC85eEGwgaNZrCWmtDuvmsIAmdbTTr+m139Kkn0bJozjDCWYhlelhvOoGW/81gbL8hxVekyLTGNLuQQRtg305WZzn/Q5BOvW9Dt+Tu/QrPAySjZEZeu0Tiw=
   on:
-    branch: master
-    tags: false
-    repo: grammy-jiang/scrapy-httpproxy
+    # branch: master
+    # tags: false
+    # repo: grammy-jiang/scrapy-httpproxy
     condition: "$TOXENV == py27"
